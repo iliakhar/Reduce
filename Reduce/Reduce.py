@@ -43,7 +43,7 @@ def dftA1(data, p1, p2, isForward):
     numSign = 1
     if isForward == False:
         divider = 1
-        numSign = 1
+        #numSign = 1
     for k1 in range(p1):
         for j2 in range(p2):
             re = 0.0
@@ -121,14 +121,14 @@ def coordMult(arrA, arrB):
     global N1
     answ = [[],[]]
     for i in range(len(arrA[0])):
-        N1+=2
+        N1+=1
         answ[0].append(arrA[0][i]*arrB[0][i] - arrA[1][i]*arrB[1][i])
         answ[1].append(arrA[0][i]*arrB[1][i] + arrB[0][i]*arrA[1][i])
     return answ
 
 def reduceDft(arrA, arrB, isDft2 = False):
     arrSize = len(arrA)
-   
+    global N1
     arrAforDft = []
     arrAforDft.append(arrA)
     arrAforDft.append([0]*(2*arrSize))
@@ -137,6 +137,7 @@ def reduceDft(arrA, arrB, isDft2 = False):
     arrBforDft.append([0]*(2*arrSize))
     for i in range(arrSize):
         arrAforDft[0].append(0)
+        N1+=1
         arrAforDft[0][i]*=2*arrSize
         arrBforDft[0].append(0)
     if(isDft2 == False):
@@ -148,10 +149,10 @@ def reduceDft(arrA, arrB, isDft2 = False):
                 mult1 = i
                 mult2 = int(size/i)
         print("Mult = ", mult1," ",mult2)
-        A = dftA2(arrAforDft, mult1, mult2)
-        B = dftA2(arrBforDft, mult1, mult2)
-        C = coordMult(A, B)
-        return dftA2(C, mult1, mult2, False)[0]
+        dftA = dftA2(arrAforDft, mult1, mult2)
+        dftB = dftA2(arrBforDft, mult1, mult2)
+        crmult = coordMult(dftA, dftB)
+        return dftA2(crmult, mult1, mult2, False)[0]
 
 def LevelLenOfArr(arrA, arrB):
     dopDiff = (len(arrA)-1)+(len(arrB)-1) +1
@@ -170,6 +171,7 @@ def ChooseReduceAndRun(name, rtype, A, B):
     arrSizeDiff = LevelLenOfArr(A, B)
     global N1
     N1 = 0
+    #0 - standart     1 - dft       2 - pdft
     if rtype == 0:
         answ = reduce(A, B)
     elif rtype == 1:
@@ -187,8 +189,8 @@ def ChooseReduceAndRun(name, rtype, A, B):
 
 ################################################################
 
-arrA = [1,4]
-arrB = [2,3,5,6]
+arrA = [1,2,3]
+arrB = [4,5,6,9]
 print("A:", arrA)
 print("B:", arrB)
 ChooseReduceAndRun("Standart",0,arrA[:], arrB[:])
