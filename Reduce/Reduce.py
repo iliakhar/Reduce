@@ -1,11 +1,11 @@
 
+from asyncio.windows_events import NULL
 import math
 N1 = 0
 
 def dft(coord, isForward = True):
     global N1
-    origCoord = [[]]
-    origCoord.append([])
+    origCoord = [[], []]
     divider = len(coord[0])
     numSign = -1
     insCount = 0
@@ -20,11 +20,11 @@ def dft(coord, isForward = True):
             N1+=5
             x = coord[0][n]
             y = coord[1][n]
-            arg = 2*math.pi*k*n/len(coord[0])
+            arg = 2*math.pi*k*n/len(coord[0])*numSign
             reCos = math.cos(arg)
             imSin = math.sin(arg)
             re += (x*reCos-y*imSin)
-            im += (x*imSin + y*reCos)*numSign
+            im += (x*imSin + y*reCos)
         origCoord[0].append(re/divider)
         origCoord[1].append(im/divider)
     return origCoord
@@ -32,18 +32,15 @@ def dft(coord, isForward = True):
 
 
 
-###############################################
+###################################################################
 def dftA1(data, p1, p2, isForward):
     global N1
-    #furieA1=[[]]
-    #furieA1.append([])
-    furieA1 = [[None]*p1*p2]
-    furieA1.append([None]*p1*p2)
+    furieA1 = [[None]*p1*p2,[None]*p1*p2]
     divider = p1
-    numSign = 1
+    numSign = -1
     if isForward == False:
         divider = 1
-        #numSign = 1
+        numSign = 1
     for k1 in range(p1):
         for j2 in range(p2):
             re = 0.0
@@ -52,11 +49,11 @@ def dftA1(data, p1, p2, isForward):
                 N1+=5
                 x = data[0][j2 + p2*j1]
                 y = data[1][j2 + p2*j1]
-                arg = 2 * math.pi *j1*k1/p1
+                arg = 2 * math.pi *j1*k1/p1*numSign
                 reCos = math.cos(arg)
                 imSin = math.sin(arg)
                 re += (x*reCos-y*imSin)
-                im += (x*imSin + y*reCos)*numSign
+                im += (x*imSin + y*reCos)
             furieA1[0][k1*p2 + j2] = re/divider
             furieA1[1][k1*p2 + j2] = im/divider
             
@@ -65,9 +62,8 @@ def dftA1(data, p1, p2, isForward):
 
 
 def dftA2(data, p1, p2, isForward = True):
-
-    furieA2 = [[None]*p1*p2]
-    furieA2.append([None]*p1*p2)
+    
+    furieA2 = [[None]*p1*p2, [None]*p1*p2]
     global N1
     furieA1 = dftA1(data, p1, p2, isForward)
     divider = p2
@@ -83,14 +79,77 @@ def dftA2(data, p1, p2, isForward = True):
                 N1+=5
                 x = furieA1[0][k1*p2 + j2]
                 y = furieA1[1][k1*p2 + j2]
-                arg = 2*math.pi*((j2*(k1+p1*k2)/(p1*p2)))
+                arg = 2*math.pi*((j2*(k1+p1*k2)/(p1*p2)))*numSign
                 reCos = math.cos(arg)
                 imSin = math.sin(arg)
                 re += (x*reCos-y*imSin)
-                im += (x*imSin + y*reCos)*numSign
+                im += (x*imSin + y*reCos)
             furieA2[0][k2*p1 + k1] = re/divider
             furieA2[1][k2*p1 + k1] = im/divider
     return furieA2
+
+###################################################################
+
+def ChangeDigit(num, ind, dg):
+    powOf2 = 2 ** ind
+    if(dg == 1): num |= powOf2
+    else: num &= ~powOf2
+    return num
+
+def MirrorBinarry(num,maxSize):
+    offsetHints = [0b11110000,0b11001100,0b10101010]
+    powOf2 = 4
+    for i in range(3):
+        num = ((num & offsetHints[i])>>powOf2) | ((num & ~offsetHints[i])<<powOf2)
+        powOf2=int(powOf2/2)
+    num >>= 8 - maxSize
+    return num
+
+
+def fftAn(r, dt, binarMaxSize, isForward, isLast = False):
+    global N1
+    answ = [[NULL]*len(dt[0]), [NULL]*len(dt[0])]
+    divider = 2
+    numSign = -1
+    powerOf2 = 2 ** r
+
+    if isForward == False:
+        divider = 1
+        numSign = 1
+    for i in range(len(dt[0])):
+        N1+=5
+        bn = i
+        mirBn = MirrorBinarry(bn, binarMaxSize)
+
+        bn = ChangeDigit(bn, binarMaxSize - r, 0)
+        re = dt[0][bn]
+        im = dt[1][bn]
+
+        arg = 2*math.pi*mirBn/powerOf2*numSign
+        bn = ChangeDigit(bn, binarMaxSize - r, 1)
+        x = dt[0][bn]
+        y = dt[1][bn]
+        reCos = math.cos(arg)
+        imSin = math.sin(arg)
+        re += (x*reCos-y*imSin)
+        im += (x*imSin + y*reCos)
+
+        if isLast:
+            answ[0][mirBn] = re/divider
+            answ[1][mirBn] = im/divider
+        else:
+            answ[0][i] = re/divider
+            answ[1][i] = im/divider 
+    return answ
+
+def fft(data, isForward = True):
+    global N1
+    dt = data[:]
+    binarMaxSize = int(math.log2( len(data[0])+0.1))
+    for i in range(binarMaxSize - 1):
+        dt = fftAn(i+1, dt, binarMaxSize, isForward)
+    dt = fftAn(binarMaxSize, dt, binarMaxSize, isForward, True)
+    return dt
 
 ###################################################################
 
@@ -126,23 +185,19 @@ def coordMult(arrA, arrB):
         answ[1].append(arrA[0][i]*arrB[1][i] + arrB[0][i]*arrA[1][i])
     return answ
 
-def reduceDft(arrA, arrB, isDft2 = False):
+def reduceDft(arrA, arrB, dftType):
     arrSize = len(arrA)
     global N1
-    arrAforDft = []
-    arrAforDft.append(arrA)
-    arrAforDft.append([0]*(2*arrSize))
-    arrBforDft = []
-    arrBforDft.append(arrB)
-    arrBforDft.append([0]*(2*arrSize))
+    arrAforDft = [arrA, [0]*(2*arrSize)]
+    arrBforDft = [arrB,[0]*(2*arrSize)]
     for i in range(arrSize):
         arrAforDft[0].append(0)
         N1+=1
         arrAforDft[0][i]*=2*arrSize
         arrBforDft[0].append(0)
-    if(isDft2 == False):
+    if dftType == 0:
         return dft(coordMult(dft(arrAforDft), dft(arrBforDft)),False)[0]
-    else:
+    elif dftType == 1:
         size = len(arrA)
         for i in range(1, math.floor(math.sqrt(len(arrA)))+1):
             if(size%i==0):
@@ -153,6 +208,8 @@ def reduceDft(arrA, arrB, isDft2 = False):
         dftB = dftA2(arrBforDft, mult1, mult2)
         crmult = coordMult(dftA, dftB)
         return dftA2(crmult, mult1, mult2, False)[0]
+    elif dftType == 2:
+        return fft(coordMult(fft(arrAforDft), fft(arrBforDft)),False)[0]
 
 def LevelLenOfArr(arrA, arrB):
     dopDiff = (len(arrA)-1)+(len(arrB)-1) +1
@@ -174,10 +231,8 @@ def ChooseReduceAndRun(name, rtype, A, B):
     #0 - standart     1 - dft       2 - pdft
     if rtype == 0:
         answ = reduce(A, B)
-    elif rtype == 1:
-        answ = reduceDft(A, B)
-    elif rtype == 2:
-        answ = reduceDft(A, B, True)
+    else:
+        answ = reduceDft(A, B, rtype - 1)
     s =len(answ)
     for i in range(s - arrSizeDiff):
             answ.pop()
@@ -196,3 +251,4 @@ print("B:", arrB)
 ChooseReduceAndRun("Standart",0,arrA[:], arrB[:])
 ChooseReduceAndRun("With dft:",1,arrA[:], arrB[:])
 ChooseReduceAndRun("With pdft:",2,arrA[:], arrB[:])
+ChooseReduceAndRun("With fft:",3,arrA[:], arrB[:])
