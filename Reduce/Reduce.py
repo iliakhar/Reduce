@@ -119,7 +119,8 @@ def fftAn(r, dt, binarMaxSize, isForward, isLast = False):
     for i in range(len(dt[0])):
         N1+=5
         bn = i
-        mirBn = MirrorBinarry(bn, binarMaxSize)
+        mirBn = MirrorBinarry(bn, binarMaxSize) & ~((~0)<<r)
+        #mirBn = MirrorBinarry(bn, binarMaxSize)
 
         bn = ChangeDigit(bn, binarMaxSize - r, 0)
         re = dt[0][bn]
@@ -176,13 +177,13 @@ def reduce(arrA, arrB):
 
     return answ
 
-def coordMult(arrA, arrB):
+def coordMult(arrA, arrB, dopMult = 1):
     global N1
     answ = [[],[]]
     for i in range(len(arrA[0])):
-        N1+=1
-        answ[0].append(arrA[0][i]*arrB[0][i] - arrA[1][i]*arrB[1][i])
-        answ[1].append(arrA[0][i]*arrB[1][i] + arrB[0][i]*arrA[1][i])
+        N1+=2
+        answ[0].append((arrA[0][i]*arrB[0][i] - arrA[1][i]*arrB[1][i])*dopMult)
+        answ[1].append((arrA[0][i]*arrB[1][i] + arrB[0][i]*arrA[1][i])*dopMult)
     return answ
 
 def reduceDft(arrA, arrB, dftType):
@@ -190,13 +191,14 @@ def reduceDft(arrA, arrB, dftType):
     global N1
     arrAforDft = [arrA, [0]*(2*arrSize)]
     arrBforDft = [arrB,[0]*(2*arrSize)]
+    dopMult = 2*arrSize
     for i in range(arrSize):
         arrAforDft[0].append(0)
-        N1+=1
-        arrAforDft[0][i]*=2*arrSize
+        #N1+=1
+        #arrAforDft[0][i]*=2*arrSize
         arrBforDft[0].append(0)
     if dftType == 0:
-        return dft(coordMult(dft(arrAforDft), dft(arrBforDft)),False)[0]
+        return dft(coordMult(dft(arrAforDft), dft(arrBforDft), dopMult),False)[0]
     elif dftType == 1:
         size = len(arrA)
         for i in range(1, math.floor(math.sqrt(len(arrA)))+1):
@@ -206,10 +208,10 @@ def reduceDft(arrA, arrB, dftType):
         print("Mult = ", mult1," ",mult2)
         dftA = dftA2(arrAforDft, mult1, mult2)
         dftB = dftA2(arrBforDft, mult1, mult2)
-        crmult = coordMult(dftA, dftB)
+        crmult = coordMult(dftA, dftB, dopMult)
         return dftA2(crmult, mult1, mult2, False)[0]
     elif dftType == 2:
-        return fft(coordMult(fft(arrAforDft), fft(arrBforDft)),False)[0]
+        return fft(coordMult(fft(arrAforDft), fft(arrBforDft), dopMult),False)[0]
 
 def LevelLenOfArr(arrA, arrB):
     dopDiff = (len(arrA)-1)+(len(arrB)-1) +1
